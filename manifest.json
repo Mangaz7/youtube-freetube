@@ -2,10 +2,11 @@
   "manifest_version": 3,
   "name": "YouTube → FreeTube",
   "version": "0.1.0",
-  "description": "Redirect YouTube links to FreeTube.",
+  "description": "Redirect YouTube video links to FreeTube.",
   "permissions": [
     "webNavigation",
-    "tabs"
+    "tabs",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
@@ -13,6 +14,15 @@
     "https://m.youtube.com/*",
     "https://youtu.be/*"
   ],
+ "declarative_net_request": {
+  "rule_resources": [
+    {
+      "id": "youtube_rules",
+      "enabled": true,
+      "path": "rules.json"
+    }
+  ]
+},
   "background": {
     "service_worker": "background.js"
   },

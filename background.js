@@ -80,22 +80,6 @@ chrome.webNavigation.onBeforeNavigate.addListener(
 );
 
 
-// Redirect YouTube SPA navigation
-chrome.webNavigation.onHistoryStateUpdated.addListener(
-    async (details) => {
-        if (details.frameId !== 0) {
-            return;
-        }
-
-        if (!isYouTubeURL(details.url)) {
-            return;
-        }
-
-        await openFreeTube(details.tabId, details.url);
-    }
-);
-
-
 // Handle video clicks from content.js
 chrome.runtime.onMessage.addListener(
     async (message, sender) => {
