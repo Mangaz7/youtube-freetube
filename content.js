@@ -1,4 +1,3 @@
-cat > content.js <<'EOF'
 function isYouTubeVideo(urlString) {
     try {
         const url = new URL(urlString);
@@ -62,4 +61,3 @@ document.addEventListener(
     },
     true
 );
-EOF
