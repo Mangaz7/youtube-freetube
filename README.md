@@ -1,3 +1,7 @@
+## Development
+
+Developed with assistance from an LLM. The source code is fully open source and available for review.
+
 # YouTube → FreeTube
 
 Automatically redirects YouTube navigation and video links to [FreeTube](https://freetubeapp.io/).
