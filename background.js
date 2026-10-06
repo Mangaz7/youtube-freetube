@@ -51,15 +51,39 @@ function isYouTubeVideo(urlString) {
     }
 }
 
-async function openFreeTube(tabId, url) {
+async function openFreeTubeAndCloseTab(tabId, url) {
     const freeTubeURL = "freetube://" + url;
 
     try {
+        // Open FreeTube in the current tab first.
+        // If the navigation is blocked by the browser, fall back
+        // to opening FreeTube separately and closing this tab.
         await chrome.tabs.update(tabId, {
             url: freeTubeURL
         });
-    } catch (error) {
-        console.error("Failed to open FreeTube:", error);
+
+        setTimeout(async () => {
+            try {
+                const tab = await chrome.tabs.get(tabId);
+
+                // If the tab is still a normal browser page,
+                // open FreeTube separately and close the blocked tab.
+                if (tab.url && !tab.url.startsWith("freetube://")) {
+                    await chrome.tabs.create({ url: freeTubeURL });
+                    await chrome.tabs.remove(tabId);
+                }
+            } catch {
+                // Tab may already have been closed or handed to FreeTube.
+            }
+        }, 300);
+
+    } catch {
+        try {
+            await chrome.tabs.create({ url: freeTubeURL });
+            await chrome.tabs.remove(tabId);
+        } catch (error) {
+            console.error("Failed to open FreeTube:", error);
+        }
     }
 }
 
@@ -75,7 +99,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(
             return;
         }
 
-        await openFreeTube(details.tabId, details.url);
+        await openFreeTubeAndCloseTab(details.tabId, details.url);
     }
 );
 
@@ -95,6 +119,6 @@ chrome.runtime.onMessage.addListener(
             return;
         }
 
-        await openFreeTube(sender.tab.id, message.url);
+        await openFreeTubeAndCloseTab(sender.tab.id, message.url);
     }
 );
