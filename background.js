@@ -96,3 +96,39 @@ chrome.runtime.onMessage.addListener(
         await openFreeTube(sender.tab.id, message.url);
     }
 );
+
+// Automatically close blocked YouTube tabs after 5 seconds
+const pendingCloseTimers = new Map();
+
+chrome.webNavigation.onErrorOccurred.addListener((details) => {
+    if (details.frameId !== 0) {
+        return;
+    }
+
+    if (details.error !== "net::ERR_BLOCKED_BY_CLIENT") {
+        return;
+    }
+
+    if (!isYouTubeURL(details.url)) {
+        return;
+    }
+
+    const tabId = details.tabId;
+
+    // Avoid multiple timers for the same tab
+    if (pendingCloseTimers.has(tabId)) {
+        clearTimeout(pendingCloseTimers.get(tabId));
+    }
+
+    const timer = setTimeout(async () => {
+        pendingCloseTimers.delete(tabId);
+
+        try {
+            await chrome.tabs.remove(tabId);
+        } catch {
+            // Tab is already closed
+        }
+    }, 1000);
+
+    pendingCloseTimers.set(tabId, timer);
+});
