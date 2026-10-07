@@ -97,38 +97,57 @@ chrome.runtime.onMessage.addListener(
     }
 );
 
-// Automatically close blocked YouTube tabs after 5 seconds
+// Automatically close blocked YouTube tabs after 1 second
 const pendingCloseTimers = new Map();
 
-chrome.webNavigation.onErrorOccurred.addListener((details) => {
-    if (details.frameId !== 0) {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    const url = changeInfo.url || tab.url;
+
+    if (!url) {
         return;
     }
 
-    if (details.error !== "net::ERR_BLOCKED_BY_CLIENT") {
+    // YouTube tab detected
+    if (isYouTubeURL(url)) {
+        // Reset existing timer
+        if (pendingCloseTimers.has(tabId)) {
+            clearTimeout(pendingCloseTimers.get(tabId));
+        }
+
+        const timer = setTimeout(async () => {
+            pendingCloseTimers.delete(tabId);
+
+            try {
+                const currentTab = await chrome.tabs.get(tabId);
+
+                // Only close if the tab is still on YouTube
+                if (
+                    currentTab.url &&
+                    isYouTubeURL(currentTab.url)
+                ) {
+                    await chrome.tabs.remove(tabId);
+                }
+            } catch {
+                // Tab is already closed
+            }
+        }, 2000);
+
+        pendingCloseTimers.set(tabId, timer);
+
         return;
     }
 
-    if (!isYouTubeURL(details.url)) {
-        return;
-    }
-
-    const tabId = details.tabId;
-
-    // Avoid multiple timers for the same tab
+    // Navigation changed away from YouTube
     if (pendingCloseTimers.has(tabId)) {
         clearTimeout(pendingCloseTimers.get(tabId));
-    }
-
-    const timer = setTimeout(async () => {
         pendingCloseTimers.delete(tabId);
+    }
+});
 
-        try {
-            await chrome.tabs.remove(tabId);
-        } catch {
-            // Tab is already closed
-        }
-    }, 1000);
-
-    pendingCloseTimers.set(tabId, timer);
+// Clean up timers when a tab is closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+    if (pendingCloseTimers.has(tabId)) {
+        clearTimeout(pendingCloseTimers.get(tabId));
+        pendingCloseTimers.delete(tabId);
+    }
 });
